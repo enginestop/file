@@ -1,0 +1,57 @@
+services:
+  n8n:
+    image: n8nio/n8n:1.110.1
+    container_name: n8n
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_HOST=db
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_USER=n8n_user
+      - DB_POSTGRESDB_PASSWORD=n8n_password
+      - N8N_SECURE_COOKIE=false
+      # Ganti dengan domain/URL Anda
+      - WEBHOOK_URL=https://nama.domain.com
+      # Optional: Set timezone
+      - TZ=Asia/Jakarta
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - n8n_network
+
+  db:
+    image: postgres:14.2
+    container_name: n8n-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=n8n
+      - POSTGRES_USER=n8n_user
+      - POSTGRES_PASSWORD=n8n_password
+      - POSTGRES_NON_ROOT_USER=n8n_user
+      - POSTGRES_NON_ROOT_PASSWORD=n8n_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - n8n_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U n8n_user -d n8n"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  n8n_data:
+    driver: local
+  postgres_data:
+    driver: local
+
+networks:
+  n8n_network:
+    driver: bridge
